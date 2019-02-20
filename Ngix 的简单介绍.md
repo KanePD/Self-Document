@@ -216,3 +216,63 @@ nginx -s reload
 ![nginx_5](C:\Users\kanewang\Desktop\nginx_5.gif)
 
 - 一个简单的反向代理就配置好了。
+## nginx 负载均衡
+
+**注：20190220更新**
+
+https://www.cnblogs.com/pangziyibudong/p/6211921.html
+
+- 准备工作
+
+```txt
+1.一台虚拟机
+2.虚拟机安装docker
+```
+
+- 如上面操作在虚拟机上搭载一个Nginx服务器
+- 使用docker 拉取nginx 镜像
+
+```bash
+docker pull nginx
+```
+
+- 运行两个nginx的容器
+
+```bash
+docker run --name nginx-test-1 -d -p 8888:80 nginx /bin/bash
+docker run --name nginx-test-2 -d -p 8889:80 nginx /bin/bash
+```
+
+- 分别进入到两个容器中，更改其中nginx web目下的index.html
+
+```bash
+docker exec -it nginx-test-1 /bin/bash
+内容改成 this is nginx1
+docker exec -it nginx-test-2 /bin/bash
+内容改成 this is nginx2
+```
+
+- 退回到虚拟机中，更改虚拟机的nginx conf文件
+
+```conf
+server{
+	location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        proxy_pass http://balance;  #balance 是下面upstream后定义的名字
+    }
+}
+# 在server{}外面增加如下代码
+upstream balance { 
+	server localhost:8888 weight=1; 
+	server localhost:8889 weight=1; 
+}
+```
+
+- 在本机访问localhost
+
+```
+curl localhost
+#
+会发现this is nginx1 、 this is nginx2交替出现
+```
